@@ -18,6 +18,7 @@ phases:
       commands:
         - TAG="$REPOSITORY_NAME.$REPOSITORY_BRANCH.$ENVIRONMENT_NAME.$(date +%Y-%m-%d.%H.%M.%S).$(echo $CODEBUILD_RESOLVED_SOURCE_VERSION | head -c 8)"
         - sed -i 's@CONTAINER_IMAGE@'"$REPOSITORY_URI:$TAG"'@' simple_jwt_api.yml
+        - sed -i 's@JWT_SECRET_VALUE@'"$JWT_SECRET"'@' simple-jwt-api.yml
         - $(aws ecr get-login --no-include-email)
         - export KUBECONFIG=$HOME/.kube/config
         - pip3 install --upgrade pip
@@ -38,9 +39,13 @@ phases:
       - aws eks update-kubeconfig --name $EKS_CLUSTER_NAME
       - chmod +rwx simple_jwt_api.yml
       - kubectl get all
+      - echo $JWT_SECRET > .env
       - kubectl apply -f simple_jwt_api.yml
       - printf '[{"name":"simple_jwt_api","imageUri":"%s"}]' $REPOSITORY_URI:$TAG > build.json
       - pwd
       - ls
 artifacts:
   files: build.json
+  env:
+    parameter-store:
+      JWT_SECRET: JWT_SECRET
